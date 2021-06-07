@@ -2,7 +2,7 @@ import config from "./../config/config";
 import webpack from "webpack";
 import webpackMiddleware from "webpack-dev-middleware";
 import webpackHotMiddleware from "webpack-hot-middleware";
-import webpackConfig from "./../webpack.config.client";
+import webpackConfig from "./../webpack.config.client.js";
 
 const compile = (app) => {
   if (config.env === "development") {
@@ -15,4 +15,6 @@ const compile = (app) => {
   }
 };
 
-export default { compile };
+export default {
+  compile,
+};

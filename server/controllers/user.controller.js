@@ -5,13 +5,12 @@ import formidable from "formidable";
 import fs from "fs";
 import profileImage from "./../../client/assets/images/profile-pic.png";
 
-// Create a new user
 const create = async (req, res) => {
   const user = new User(req.body);
   try {
     await user.save();
     return res.status(200).json({
-      message: "Successfully Signed Up!",
+      message: "Successfully signed up!",
     });
   } catch (err) {
     return res.status(400).json({
@@ -20,34 +19,35 @@ const create = async (req, res) => {
   }
 };
 
-// Load user and append to req
+/**
+ * Load user and append to req.
+ */
 const userByID = async (req, res, next, id) => {
   try {
     let user = await User.findById(id)
+
       .populate("following", "_id name")
       .populate("followers", "_id name")
       .exec();
     if (!user)
-      return res.status(400).json({
-        error: "User not found!",
+      return res.status("400").json({
+        error: "User not found",
       });
     req.profile = user;
     next();
   } catch (err) {
-    return res.status(400).json({
-      error: "Could not retrieve user!",
+    return res.status("400").json({
+      error: "Could not retrieve user",
     });
   }
 };
 
-// Read the user data and remove sensitive information
 const read = (req, res) => {
   req.profile.hashed_password = undefined;
   req.profile.salt = undefined;
   return res.json(req.profile);
 };
 
-// List all users
 const list = async (req, res) => {
   try {
     let users = await User.find().select("name email updated created");
@@ -59,8 +59,7 @@ const list = async (req, res) => {
   }
 };
 
-// Update user details
-const update = async (req, res) => {
+const update = (req, res) => {
   let form = new formidable.IncomingForm();
   form.keepExtensions = true;
   form.parse(req, async (err, fields, files) => {
@@ -83,13 +82,12 @@ const update = async (req, res) => {
       res.json(user);
     } catch (err) {
       return res.status(400).json({
-        error: errorHanler.getErrorMessage(err),
+        error: errorHandler.getErrorMessage(err),
       });
     }
   });
 };
 
-// Remove a user
 const remove = async (req, res) => {
   try {
     let user = req.profile;
@@ -106,7 +104,7 @@ const remove = async (req, res) => {
 
 const photo = (req, res, next) => {
   if (req.profile.photo.data) {
-    res.setHeader("Content-Type", req.profile.photo.contentType);
+    res.set("Content-Type", req.profile.photo.contentType);
     return res.send(req.profile.photo.data);
   }
   next();
@@ -116,7 +114,6 @@ const defaultPhoto = (req, res) => {
   return res.sendFile(process.cwd() + profileImage);
 };
 
-// Add Follower
 const addFollowing = async (req, res, next) => {
   try {
     await User.findByIdAndUpdate(req.body.userId, {
@@ -134,15 +131,12 @@ const addFollower = async (req, res) => {
   try {
     let result = await User.findByIdAndUpdate(
       req.body.followId,
-      {
-        $push: { followers: req.body.userId },
-      },
+      { $push: { followers: req.body.userId } },
       { new: true }
     )
       .populate("following", "_id name")
       .populate("followers", "_id name")
       .exec();
-
     result.hashed_password = undefined;
     result.salt = undefined;
     res.json(result);
@@ -165,7 +159,6 @@ const removeFollowing = async (req, res, next) => {
     });
   }
 };
-
 const removeFollower = async (req, res) => {
   try {
     let result = await User.findByIdAndUpdate(
@@ -180,7 +173,20 @@ const removeFollower = async (req, res) => {
     result.salt = undefined;
     res.json(result);
   } catch (err) {
-    res.status(400).json({
+    return res.status(400).json({
+      error: errorHandler.getErrorMessage(err),
+    });
+  }
+};
+
+const findPeople = async (req, res) => {
+  let following = req.profile.following;
+  following.push(req.profile._id);
+  try {
+    let users = await User.find({ _id: { $nin: following } }).select("name");
+    res.json(users);
+  } catch (err) {
+    return res.status(400).json({
       error: errorHandler.getErrorMessage(err),
     });
   }
@@ -195,8 +201,9 @@ export default {
   update,
   photo,
   defaultPhoto,
-  addFollower,
   addFollowing,
+  addFollower,
   removeFollowing,
   removeFollower,
+  findPeople,
 };
